@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Indeed</title>
+	<link rel="stylesheet" href="/css/default.css" />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+	<script type="text/javascript" src="http://gdc.indeed.com/ads/apiresults.js"></script>                             
+	<script>
+	var map, markers = [];
+	var lastInfo;
+	function processResults(data){
+		console.log(data);
+	}
+	function initMap(){
+		map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 13,
+        center: {lat: 40.75, lng: -73.99451}
+      });
+	}
+	document.addEventListener("DOMContentLoaded",function(){
+		document.querySelector("form").addEventListener("submit",function(event){
+			event.preventDefault();
+			$.ajax({
+				url: '/search',
+				method: 'post',
+				data: {
+					q: document.querySelector('input[name=q]').value
+				},
+				success: function(data){
+					console.log(data);
+					data.results.forEach( function(c,i){
+						// add a new marker to the markers array
+						let marker = new google.maps.Marker({
+		          position: {lat: c.latitude, lng: c.longitude},
+		          map: map,
+		          'data-id': i
+		        });
+		        let content = `
+		        	<div class="info">
+		        		<h4>${c.company}</h4>
+		        		<h5>${c.jobtitle}</h5>
+		        		<a href="${c.url}"><p>${c.snippet}</p></a>
+		        	</div>`;
+		        marker.addListener('click',function(event){
+		        	console.log('click detected',lastInfo);
+		        	if( lastInfo ) lastInfo.close();
+		        	let t = new google.maps.InfoWindow({
+			          content: content
+			        });
+			        t.open(map,markers[i]);
+			        lastInfo = t;
+		        });
+						markers.push( marker );
+					});
+				}
+			});
+		})
+	});
+	// $.ajax({
+	// 	url: 'http://api.indeed.com/ads/apisearch',
+	// 	data: {
+	// 		publisher: <%= ENV['INDEED_PUBLISHER_ID'] %>,
+	// 		v: '2',
+	// 		format: 'json',
+	// 		callback: processResults,
+	// 		q: 'Junior Web Developer',
+	// 		l: 'New York, NY',
+	// 		sort: 'date',
+	// 		radius: '10',
+	// 		st: 'employer',
+	// 		// jt: '', // "fulltime", "parttime", "contract", "internship", "temporary"
+	// 		// start: '',
+	// 		limit: 100,
+	// 		fromage: 7,
+	// 		// highlight: '',
+	// 		filter: 0, // remove duplicates
+	// 		latlong: 1,
+	// 		// co: '',
+	// 		chnl: 'NYCDA,+NYC',
+	// 		userip: '<%= request.ip %>',
+	// 		useragent: '<%= request.user_agent %>',
+	// 	}
+	// });
+	</script>
+</head>
+<body>
+	<h3>Job Search</h3>
+	<form method="post" action="/search">
+		<input name="q" value="<%= @search %>" /><input type="submit" value="Search" />
+	</form>
+	<div id="map"></div>
+	<span id="indeed_at"><a title="Job Search" href="https://www.indeed.com">jobs by <img alt=Indeed src="https://www.indeed.com/p/jobsearch.gif" style="border: 0; vertical-align: middle;"></a></span>
+	<script async defer
+	src="https://maps.googleapis.com/maps/api/js?key=<%= ENV['GOOGLE_MAPS_API_KEY'] %>&callback=initMap"></script>
+</body>
+</html>
